@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧠 Project Analyzer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --bg-card: white;
+            --text-primary: #1e3c72;
+            --text-secondary: #64748b;
+            --border-color: #e0e0e0;
+            --panel-bg: white;
+            --tree-hover: #e6f0ff;
+        }
+
+        body.dark-mode {
+            --bg-primary: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --bg-card: #1e293b;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --panel-bg: #0f172a;
+            --tree-hover: #334155;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            height: 100vh;
+            overflow: hidden;
+            font-size: 18px;
+            transition: all 0.3s;
+        }
+
+        /* Header - Single Row */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .header-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+
+        .github-input {
+            flex: 2;
+            padding: 16px 24px;
+            font-size: 1.15rem;
+            border: none;
+            border-radius: 10px;
+            outline: none;
+        }
+
+        #searchBox {
+            flex: 1;
+            padding: 16px 24px;
+            font-size: 1.15rem;
+            border: none;
+            border-radius: 10px;
+            outline: none;
+        }
+
+        .btn {
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            background: white;
+            color: #667eea;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .dark-mode-toggle {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 700;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .dark-mode-toggle:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .status {
+            margin-top: 12px;
+            font-size: 1.05rem;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 160px);
+        }
+
+        .left-panel {
+            width: 40%;
+            background: var(--panel-bg);
+            overflow-y: auto;
+            padding: 30px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .panel-title {
+            font-size: 1.8rem;
+            color: var(--text-primary);
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+            font-weight: 700;
+        }
+
+        .legend {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 18px 22px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border-left: 4px solid #667eea;
+        }
+
+        .legend-title {
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            font-size: 1.3rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+        }
+
+        .tree-item {
+            margin-left: 25px;
+            margin-bottom: 8px;
+        }
+
+        .tree-node {
+            padding: 14px 18px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            border-left: 3px solid transparent;
+            color: var(--text-primary);
+        }
+
+        .tree-node:hover {
+            background: var(--tree-hover);
+            border-left-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .tree-node.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 700;
+        }
+
+        .tree-node.hidden {
+            display: none;
+        }
+
+        .right-panel {
+            flex: 1;
+            background: var(--bg-card);
+            overflow-y: auto;
+            padding: 40px;
+            transition: all 0.3s;
+        }
+
+        .detail-card {
+            background: var(--panel-bg);
+            border-radius: 14px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-left: 5px solid #667eea;
+        }
+
+        .detail-title {
+            font-size: 2rem;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .detail-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 25px;
+        }
+
+        .section-header {
+            font-size: 1.5rem;
+            color: #667eea;
+            font-weight: 700;
+            margin: 25px 0 15px 0;
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+        }
+
+        .connection-item {
+            background: linear-gradient(135deg, #e0e7ff 0%, #e0f2fe 100%);
+            padding: 18px 22px;
+            border-radius: 10px;
+            margin: 12px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .connection-function {
+            font-weight: 700;
+            color: #1e3c72;
+            font-size: 1.3rem;
+        }
+
+        .connection-file {
+            color: #64748b;
+            font-size: 1.1rem;
+            margin-top: 6px;
+            display: block;
+        }
+
+        body.dark-mode .connection-item {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        body.dark-mode .connection-function {
+            color: #e2e8f0;
+        }
+
+        .suggestion-card {
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            padding: 22px 26px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border-left: 5px solid #f59e0b;
+        }
+
+        .suggestion-card.severity-high {
+            border-left-color: #ef4444;
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        }
+
+        .suggestion-card.severity-medium {
+            border-left-color: #f59e0b;
+        }
+
+        .suggestion-card.severity-low {
+            border-left-color: #3b82f6;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        }
+
+        .suggestion-card.severity-info {
+            border-left-color: #10b981;
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        }
+
+        body.dark-mode .suggestion-card {
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .suggestion-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #92400e;
+            margin-bottom: 10px;
+        }
+
+        body.dark-mode .suggestion-title {
+            color: #fbbf24;
+        }
+
+        .suggestion-text {
+            font-size: 1.1rem;
+            color: #78350f;
+            line-height: 1.7;
+        }
+
+        body.dark-mode .suggestion-text {
+            color: #fde68a;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .metric-box {
+            background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        body.dark-mode .metric-box {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .metric-value {
+            font-size: 2.8rem;
+            font-weight: 900;
+            color: #667eea;
+        }
+
+        .metric-label {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            font-weight: 600;
+        }
+
+        .score-badge {
+            display: inline-block;
+            padding: 22px 45px;
+            border-radius: 16px;
+            font-size: 3.2rem;
+            font-weight: 900;
+            color: white;
+            margin: 18px 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+        }
+
+        .spinner {
+            border: 5px solid #e0e7ff;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 25px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 100px 40px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state h2 {
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+        }
+
+        .impact-box {
+            background: rgba(245, 158, 11, 0.1);
+            padding: 22px;
+            border-radius: 12px;
+            border-left: 5px solid #f59e0b;
+            font-size: 1.2rem;
+            line-height: 2;
+        }
+
+        .impact-label {
+            font-weight: 700;
+            color: #92400e;
+        }
+
+        body.dark-mode .impact-label {
+            color: #fbbf24;
+        }
+
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--border-color);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧠 Project Analyzer</h1>
+        <div class="header-row">
+            <input 
+                type="text" 
+                id="githubUrl" 
+                class="github-input"
+                placeholder="Enter GitHub URL (e.g., https://github.com/user/repo)"
+                value="https://github.com/psf/requests"
+            >
+            <button class="btn" onclick="analyzeRepo()">🔍 Analyze</button>
+            <input 
+                type="text" 
+                id="searchBox" 
+                placeholder="🔍 Search..."
+                oninput="filterTree()"
+            >
+            <button class="dark-mode-toggle" onclick="toggleDarkMode()">🌙 Dark</button>
+            <button class="btn" onclick="exportJSON()">📥 JSON</button>
+            <button class="btn" onclick="exportPDF()">📄 PDF</button>
+        </div>
+        <div class="status" id="status"></div>
+    </div>
+
+    <div class="main-container">
+        <div class="left-panel">
+            <div class="panel-title">📁 Architecture</div>
+            <div class="legend">
+                <div class="legend-title">🎨 Legend</div>
+                <div class="legend-item">📄 Files</div>
+                <div class="legend-item">🟢 Classes</div>
+                <div class="legend-item">🟡 Functions</div>
+                <div class="legend-item">🟣 Methods</div>
+            </div>
+            <div id="treeView">
+                <div class="empty-state">
+                    <h2>👈</h2>
+                    <p>Enter GitHub URL and Analyze</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div id="detailView">
+                <div class="empty-state">
+                    <h2>👋</h2>
+                    <p>Select from tree to see details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <script>
+        const API_URL = 'http://127.0.0.1:8000/api';
+        let analysisData = null;
+
+        // Log on page load
+        console.log('Script loaded successfully');
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const btn = document.querySelector('.dark-mode-toggle');
+            btn.textContent = document.body.classList.contains('dark-mode') ? '☀️ Light' : '🌙 Dark';
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        }
+
+        if (localStorage.getItem('darkMode') === 'true') {
+            toggleDarkMode();
+        }
+
+        function filterTree() {
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            const nodes = document.querySelectorAll('.tree-node');
+            
+            nodes.forEach(node => {
+                const text = node.textContent.toLowerCase();
+                if (text.includes(search)) {
+                    node.classList.remove('hidden');
+                } else {
+                    node.classList.add('hidden');
+                }
+            });
+        }
+
+        function exportJSON() {
+            if (!analysisData) {
+                alert('Please analyze a repository first');
+                return;
+            }
+            
+            const dataStr = JSON.stringify(analysisData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${analysisData.project_name}_analysis.json`;
+            link.click();
+        }
+
+        function exportPDF() {
+            if (!analysisData) {
+                alert('Please analyze a repository first');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFontSize(20);
+            doc.text(`Project: ${analysisData.project_name}`, 20, 20);
+            
+            doc.setFontSize(14);
+            doc.text(`Score: ${analysisData.complexity_score.overall_score}`, 20, 35);
+            
+            doc.save(`${analysisData.project_name}_analysis.pdf`);
+        }
+
+        async function analyzeRepo() {
+            console.log('analyzeRepo called');
+            
+            const url = document.getElementById('githubUrl').value.trim();
+            
+            if (!url || !url.startsWith('https://github.com/')) {
+                alert('Please enter a valid GitHub URL');
+                return;
+            }
+
+            document.getElementById('status').textContent = '⏳ Analyzing...';
+            document.getElementById('treeView').innerHTML = '<div class="loading"><div class="spinner"></div><p>Analyzing...</p></div>';
+
+            try {
+                const response = await fetch(`${API_URL}/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ github_url: url })
+                });
+
+                if (!response.ok) throw new Error('Analysis failed');
+
+                analysisData = await response.json();
+                analysisData.github_url = url;  // Store the URL
+                
+                console.log('Analysis complete. Data:', analysisData);
+                
+                document.getElementById('status').textContent = `✅ ${analysisData.project_name}`;
+                
+                renderTree();
+                showOverview();
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                document.getElementById('status').textContent = '❌ ' + error.message;
+            }
+        }
+
+        function escapeQuotes(str) {
+            return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+
+        function renderTree() {
+            console.log('renderTree called');
+            
+            const architecture = analysisData.data.architecture;
+            let html = '';
+
+            architecture.forEach(file => {
+                // Double-escape backslashes for onclick
+                const escapedFile = file.file.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                
+                html += `
+                    <div class="tree-item">
+                        <div class="tree-node" style="color: #2563eb; font-weight: 700; font-size: 1.4rem;" onclick="showFile('${escapedFile}');">
+                            📄 ${file.file}
+                        </div>
+                `;
+
+                file.classes.forEach(cls => {
+                    const escapedClassName = cls.name.replace(/'/g, "\\'");
+                    
+                    html += `
+                        <div class="tree-item">
+                            <div class="tree-node" style="color: #059669; margin-left: 20px; font-weight: 700; font-size: 1.3rem;" onclick="showClass('${escapedFile}', '${escapedClassName}');">
+                                🟢 ${cls.name}
+                            </div>
+                    `;
+                    
+                    cls.methods.forEach(method => {
+                        const escapedMethod = method.replace(/'/g, "\\'");
+                        
+                        html += `
+                            <div class="tree-item">
+                                <div class="tree-node" style="color: #7c3aed; margin-left: 40px; font-weight: 600; font-size: 1.25rem;" onclick="showFunction('${escapedClassName}.${escapedMethod}')">
+                                    🟣 ${method}()
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `</div>`;
+                });
+
+                file.functions.forEach(func => {
+                    const escapedFunc = func.replace(/'/g, "\\'");
+                    
+                    html += `
+                        <div class="tree-item">
+                            <div class="tree-node" style="color: #d97706; margin-left: 40px; font-weight: 600; font-size: 1.25rem;" onclick="showFunction('${escapedFunc}')">
+                                🟡 ${func}()
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+            });
+
+            document.getElementById('treeView').innerHTML = html;
+            console.log('Tree rendered');
+        }
+
+        function showOverview() {
+            const c = analysisData.complexity_score;
+            const s = analysisData.summary;
+            const suggestions = analysisData.ai_suggestions || [];
+
+            document.getElementById('detailView').innerHTML = `
+                <div class="detail-card">
+                    <div class="detail-title">📊 Overview</div>
+                    <div style="text-align: center; margin: 25px 0;">
+                        <div class="score-badge" style="background: linear-gradient(135deg, ${c.overall_score >= 80 ? '#11998e, #38ef7d' : c.overall_score >= 60 ? '#667eea, #764ba2' : '#f093fb, #f5576c'});">
+                            ${c.overall_score}
+                        </div>
+                        <div style="font-size: 1.3rem; color: var(--text-secondary); margin-top: 12px;">
+                            Grade: ${c.grade} - ${c.complexity}
+                        </div>
+                    </div>
+
+                    <div class="metric-grid">
+                        <div class="metric-box">
+                            <div class="metric-value">${s.total_files}</div>
+                            <div class="metric-label">Files</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${s.total_functions}</div>
+                            <div class="metric-label">Functions</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${s.total_issues}</div>
+                            <div class="metric-label">Issues</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${c.details.avg_functions_per_file}</div>
+                            <div class="metric-label">Avg/File</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-title">🤖 AI Suggestions</div>
+                    ${suggestions.map(sug => `
+                        <div class="suggestion-card severity-${sug.severity}">
+                            <div class="suggestion-title">${sug.title}</div>
+                            <div class="suggestion-text">
+                                <strong>Issue:</strong> ${sug.description}<br>
+                                <strong>Suggestion:</strong> ${sug.suggestion}<br>
+                                <strong>Impact:</strong> ${sug.impact}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function showFile(fileName) {
+            console.log('=== showFile CALLED ===');
+            console.log('Received fileName:', fileName);
+            
+            if (!analysisData) {
+                alert('No analysis data available');
+                return;
+            }
+
+            const normalizedSearch = fileName.replace(/\\\\/g, '\\');
+            const file = analysisData.data.architecture.find(f => f.file === normalizedSearch);
+            const metrics = analysisData.data.metrics.find(m => m.file === normalizedSearch);
+
+            if (!file || !metrics) {
+                console.error('File not found');
+                document.getElementById('detailView').innerHTML = `
+                    <div class="detail-card">
+                        <div class="detail-title">❌ File Not Found</div>
+                        <p style="color: #ef4444;">Could not find: <strong>${normalizedSearch}</strong></p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Generate file description based on name
+            const fileDesc = getFileDescription(file.file);
+
+            document.getElementById('detailView').innerHTML = `
+                <div class="detail-card">
+                    <div class="detail-title">📂 ${file.file}</div>
+                    <div class="detail-subtitle" style="font-size: 1.2rem; color: #667eea; margin-bottom: 20px;">
+                        💡 ${fileDesc}
+                    </div>
+                    
+                    <div class="metric-grid">
+                        <div class="metric-box">
+                            <div class="metric-value">${metrics.total_functions}</div>
+                            <div class="metric-label">Functions</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${metrics.total_classes}</div>
+                            <div class="metric-label">Classes</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${metrics.external_calls}</div>
+                            <div class="metric-label">External Calls</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value" style="color: ${metrics.risk_level === 'HIGH' ? '#ef4444' : metrics.risk_level === 'MEDIUM' ? '#f59e0b' : '#10b981'}">
+                                ${metrics.risk_level}
+                            </div>
+                            <div class="metric-label">Risk Level</div>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(102, 126, 234, 0.05); padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #667eea;">
+                        <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 10px;">📋 Risk Analysis</div>
+                        <div style="font-size: 1.1rem; line-height: 1.8; color: var(--text-primary);">
+                            <strong>Risk Level:</strong> ${metrics.risk_level}<br>
+                            <strong>Reason:</strong> ${getRiskReason(metrics, file)}<br>
+                            <strong>Impact:</strong> Changes here may affect ${metrics.external_calls} dependent functions
+                        </div>
+                    </div>
+
+                    ${file.classes.length > 0 ? `
+                        <div class="section-header">🟢 Classes (${file.classes.length})</div>
+                        ${file.classes.map(cls => {
+                            const escapedFile = file.file.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                            const escapedClass = cls.name.replace(/'/g, "\\'");
+                            const classDesc = getClassDescription(cls.name);
+                            return `
+                                <div class="connection-item" style="cursor: pointer;" onclick="showClass('${escapedFile}', '${escapedClass}')">
+                                    <div class="connection-function" style="color: #059669;">🟢 ${cls.name}</div>
+                                    <div style="font-size: 1.05rem; color: var(--text-secondary);">💡 ${classDesc}</div>
+                                    <div style="font-size: 0.95rem; color: var(--text-secondary); margin-top: 5px;">${cls.methods.length} methods</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    ` : '<p style="color: var(--text-secondary); margin: 15px 0;">No classes in this file</p>'}
+
+                    ${file.functions.length > 0 ? `
+                        <div class="section-header">🟡 Functions (${file.functions.length})</div>
+                        ${file.functions.map(func => {
+                            const escapedFunc = func.replace(/'/g, "\\'");
+                            const funcDesc = getFunctionDescription(func);
+                            return `
+                                <div class="connection-item" style="cursor: pointer;" onclick="showFunction('${escapedFunc}')">
+                                    <div class="connection-function" style="color: #d97706;">🟡 ${func}()</div>
+                                    <div style="font-size: 1.05rem; color: var(--text-secondary);">💡 ${funcDesc}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    ` : '<p style="color: var(--text-secondary); margin: 15px 0;">No standalone functions</p>'}
+                </div>
+            `;
+        }
+
+        function showClass(fileName, className) {
+            console.log('=== showClass CALLED ===');
+            
+            if (!analysisData) {
+                alert('No analysis data available');
+                return;
+            }
+
+            const normalizedFileName = fileName.replace(/\\\\/g, '\\');
+            const file = analysisData.data.architecture.find(f => f.file === normalizedFileName);
+            if (!file) return;
+            
+            const cls = file.classes.find(c => c.name === className);
+            if (!cls) return;
+
+            const classDesc = getClassDescription(className);
+
+            document.getElementById('detailView').innerHTML = `
+                <div class="detail-card">
+                    <div class="detail-title">🟢 Class: ${className}</div>
+                    <div class="detail-subtitle" style="font-size: 1.2rem; color: #059669; margin-bottom: 20px;">
+                        💡 ${classDesc}
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 20px;">
+                        📂 Located in: ${file.file}
+                    </div>
+
+                    <div class="section-header">📋 Class Information</div>
+                    <div class="metric-grid">
+                        <div class="metric-box">
+                            <div class="metric-value">${cls.methods.length}</div>
+                            <div class="metric-label">Methods</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${cls.methods.length > 6 ? '⚠️' : '✅'}</div>
+                            <div class="metric-label">${cls.methods.length > 6 ? 'Large Class' : 'Good Size'}</div>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(5, 150, 105, 0.05); padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #059669;">
+                        <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 10px;">📋 Class Analysis</div>
+                        <div style="font-size: 1.1rem; line-height: 1.8; color: var(--text-primary);">
+                            <strong>Complexity:</strong> ${cls.methods.length > 6 ? 'HIGH - Consider splitting' : 'GOOD - Well organized'}<br>
+                            <strong>Reason:</strong> ${cls.methods.length > 6 ? 'Too many methods may indicate multiple responsibilities' : 'Appropriate number of methods for single responsibility'}<br>
+                            <strong>Methods Count:</strong> ${cls.methods.length}
+                        </div>
+                    </div>
+
+                    <div class="section-header">🟣 Methods (${cls.methods.length})</div>
+                    <div style="display: grid; gap: 12px;">
+                        ${cls.methods.map(method => {
+                            const escapedClass = className.replace(/'/g, "\\'");
+                            const escapedMethod = method.replace(/'/g, "\\'");
+                            const methodDesc = getFunctionDescription(method);
+                            return `
+                                <div class="connection-item" style="cursor: pointer;" onclick="showFunction('${escapedClass}.${escapedMethod}')">
+                                    <div class="connection-function" style="color: #7c3aed;">🟣 ${method}()</div>
+                                    <div style="font-size: 1.05rem; color: var(--text-secondary);">💡 ${methodDesc}</div>
+                                    <div style="font-size: 0.95rem; color: var(--text-secondary); margin-top: 5px;">Click to see connections and impact</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function showFunction(funcName) {
+            console.log('=== showFunction CALLED ===');
+            
+            if (!analysisData) {
+                alert('No analysis data available');
+                return;
+            }
+            
+            const func = analysisData.data.connections.find(f => f.function === funcName);
+            const calledBy = analysisData.data.connections.filter(f => 
+                f.calls.some(call => call.function === funcName.split('.').pop())
+            ).map(f => ({name: f.function, file: f.file}));
+
+            let funcFile = 'Unknown';
+            analysisData.data.architecture.forEach(file => {
+                if (file.functions.includes(funcName)) funcFile = file.file;
+                file.classes.forEach(cls => {
+                    if (cls.methods.includes(funcName.split('.').pop())) funcFile = file.file;
+                });
+            });
+
+            const funcDesc = getFunctionDescription(funcName.split('.').pop());
+            const riskLevel = calledBy.length > 3 ? 'HIGH' : calledBy.length > 1 ? 'MEDIUM' : 'LOW';
+            const riskReason = getRiskReasonForFunction(funcName, calledBy.length, func ? func.calls.length : 0);
+
+            document.getElementById('detailView').innerHTML = `
+                <div class="detail-card">
+                    <div class="detail-title">🟡 ${funcName}()</div>
+                    <div class="detail-subtitle" style="font-size: 1.2rem; color: #d97706; margin-bottom: 10px;">
+                        💡 ${funcDesc}
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 20px;">
+                        📂 Located in: ${funcFile}
+                    </div>
+
+                    ${func && func.calls.length > 0 ? `
+                        <div class="section-header">🔗 This Function Calls</div>
+                        ${func.calls.map(call => `
+                            <div class="connection-item">
+                                <div class="connection-function">→ ${call.function}()</div>
+                                <span class="connection-file">📂 ${call.file}</span>
+                            </div>
+                        `).join('')}
+                    ` : '<p style="color: var(--text-secondary); margin: 15px 0; font-size: 1.15rem;">Does not call any other project functions</p>'}
+
+                    ${calledBy.length > 0 ? `
+                        <div class="section-header">📥 Called By</div>
+                        ${calledBy.map(caller => `
+                            <div class="connection-item">
+                                <div class="connection-function">← ${caller.name}()</div>
+                                <span class="connection-file">📂 ${caller.file}</span>
+                            </div>
+                        `).join('')}
+                    ` : '<p style="color: var(--text-secondary); margin: 15px 0; font-size: 1.15rem;">Not called by any other project function</p>'}
+
+                    <div class="section-header">🔥 Impact Analysis</div>
+                    <div class="impact-box">
+                        <div style="font-size: 1.2rem; line-height: 2;">
+                            <div><span class="impact-label">Direct Impact:</span> ${calledBy.length} function(s) will be affected if this changes</div>
+                            <div><span class="impact-label">Indirect Impact:</span> ${func ? func.calls.length : 0} function(s) this depends on</div>
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid rgba(245, 158, 11, 0.3);">
+                                <span class="impact-label">Risk Level:</span> 
+                                <span style="font-weight: 900; font-size: 1.3rem; color: ${riskLevel === 'HIGH' ? '#ef4444' : riskLevel === 'MEDIUM' ? '#f59e0b' : '#10b981'}">
+                                    ${riskLevel} ${riskLevel === 'HIGH' ? '🔴' : riskLevel === 'MEDIUM' ? '🟡' : '🟢'}
+                                </span>
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <span class="impact-label">Reason:</span><br>
+                                <span style="font-size: 1.1rem; color: var(--text-primary);">${riskReason}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        console.log('All functions defined successfully');
+                // ===== DESCRIPTION GENERATORS =====
+
+        function getFileDescription(fileName) {
+            const name = fileName.toLowerCase();
+            
+            if (name.includes('auth') || name.includes('login')) return 'Handles authentication and user login';
+            if (name.includes('api') || name.includes('endpoint')) return 'Manages API endpoints and routes';
+            if (name.includes('model') || name.includes('schema')) return 'Defines data models and schemas';
+            if (name.includes('util') || name.includes('helper')) return 'Contains utility and helper functions';
+            if (name.includes('config') || name.includes('setting')) return 'Manages configuration settings';
+            if (name.includes('db') || name.includes('database')) return 'Handles database operations';
+            if (name.includes('test')) return 'Contains unit and integration tests';
+            if (name.includes('middleware')) return 'Implements middleware logic';
+            if (name.includes('service')) return 'Business logic and service layer';
+            if (name.includes('controller')) return 'Handles request/response logic';
+            if (name.includes('route')) return 'Defines application routes';
+            if (name.includes('view')) return 'Manages UI views and templates';
+            if (name.includes('exception') || name.includes('error')) return 'Custom error handling';
+            if (name.includes('__init__')) return 'Package initialization file';
+            
+            return 'Core application module';
+        }
+
+        function getClassDescription(className) {
+            const name = className.toLowerCase();
+            
+            if (name.includes('user')) return 'Manages user data and operations';
+            if (name.includes('auth') || name.includes('login')) return 'Handles authentication logic';
+            if (name.includes('session')) return 'Manages user sessions';
+            if (name.includes('token')) return 'Handles token generation and validation';
+            if (name.includes('request')) return 'Processes HTTP requests';
+            if (name.includes('response')) return 'Formats HTTP responses';
+            if (name.includes('model')) return 'Data model definition';
+            if (name.includes('service')) return 'Business logic service';
+            if (name.includes('repository') || name.includes('repo')) return 'Data access layer';
+            if (name.includes('controller')) return 'Request handler';
+            if (name.includes('middleware')) return 'Request/response processor';
+            if (name.includes('exception') || name.includes('error')) return 'Custom exception handler';
+            if (name.includes('validator')) return 'Input validation logic';
+            if (name.includes('adapter')) return 'Interface adapter';
+            if (name.includes('manager')) return 'Resource management';
+            
+            return 'Core business logic component';
+        }
+
+        function getFunctionDescription(funcName) {
+            const name = funcName.toLowerCase();
+            
+            if (name.includes('login') || name.includes('signin')) return 'Handles user login';
+            if (name.includes('logout') || name.includes('signout')) return 'Handles user logout';
+            if (name.includes('register') || name.includes('signup')) return 'Handles user registration';
+            if (name.includes('create')) return 'Creates new resource';
+            if (name.includes('update') || name.includes('edit')) return 'Updates existing resource';
+            if (name.includes('delete') || name.includes('remove')) return 'Deletes resource';
+            if (name.includes('get') || name.includes('fetch') || name.includes('retrieve')) return 'Retrieves data';
+            if (name.includes('list') || name.includes('all')) return 'Lists multiple items';
+            if (name.includes('validate')) return 'Validates input data';
+            if (name.includes('verify')) return 'Verifies credentials or data';
+            if (name.includes('hash') || name.includes('encrypt')) return 'Encrypts or hashes data';
+            if (name.includes('decrypt')) return 'Decrypts data';
+            if (name.includes('token')) return 'Manages access tokens';
+            if (name.includes('send')) return 'Sends data or notifications';
+            if (name.includes('receive')) return 'Receives and processes data';
+            if (name.includes('parse')) return 'Parses input data';
+            if (name.includes('format')) return 'Formats output data';
+            if (name.includes('init') || name.includes('setup')) return 'Initializes component';
+            if (name.includes('process')) return 'Processes business logic';
+            if (name.includes('handle')) return 'Handles specific operation';
+            if (name.includes('check')) return 'Performs validation check';
+            
+            return 'Performs core operation';
+        }
+
+        function getRiskReason(metrics, file) {
+            if (metrics.risk_level === 'HIGH') {
+                return `High number of external calls (${metrics.external_calls}). Many functions depend on this file, making changes risky.`;
+            } else if (metrics.risk_level === 'MEDIUM') {
+                return `Moderate external dependencies (${metrics.external_calls}). Changes require careful testing.`;
+            } else {
+                return `Low external dependencies (${metrics.external_calls}). Isolated module with minimal risk.`;
+            }
+        }
+
+        function getRiskReasonForFunction(funcName, calledByCount, callsCount) {
+            const name = funcName.toLowerCase();
+            
+            if (calledByCount > 3) {
+                if (name.includes('auth') || name.includes('login') || name.includes('verify')) {
+                    return 'Critical authentication function used by many components. Changes may affect security across the application.';
+                } else if (name.includes('get') || name.includes('fetch')) {
+                    return 'Core data retrieval function used extensively. Breaking changes will cascade through the application.';
+                } else if (name.includes('validate')) {
+                    return 'Validation logic used by multiple modules. Changes may cause unexpected validation failures.';
+                } else {
+                    return `Widely used function (${calledByCount} callers). Changes will have broad impact across the codebase.`;
+                }
+            } else if (calledByCount > 1) {
+                return `Shared function used by ${calledByCount} other functions. Moderate testing required for changes.`;
+            } else if (callsCount > 3) {
+                return `Complex function with ${callsCount} dependencies. Changes may cause unexpected side effects.`;
+            } else {
+                return 'Isolated function with minimal dependencies. Safe to modify with localized impact.';
+            }
+        }
+    </script>
+</body>
+</html>
